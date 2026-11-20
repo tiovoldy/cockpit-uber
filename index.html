@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#0b0f17" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <title>Cockpit Uber — Ganhos, Metas e Estratégia</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="container">
+    <!-- Topbar -->
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-badge">U</div>
+        <div>
+          <h1>Cockpit Uber — Iago</h1>
+          <p id="updatedAt">Atualizado: --</p>
+        </div>
+      </div>
+      <div class="topbar-actions">
+        <span class="pill" id="syncBadge">Modo Local</span>
+        <span class="pill" id="cycleLabel">Ciclo: --</span>
+        <button class="btn-ghost" id="btnConfigApi" type="button">⚙ Conectar Planilha</button>
+        <a class="btn-link" id="sheetLink" href="#" target="_blank" rel="noopener noreferrer">
+          Google Planilha ↗
+        </a>
+      </div>
+    </header>
+
+    <!-- Quick Entry (Shift or Fuel/Expense) -->
+    <section class="card">
+      <div class="card-header" style="margin-bottom:14px;flex-wrap:wrap;">
+        <div>
+          <div class="card-title">Lançamento Rápido (Celular / PC)</div>
+          <div class="card-subtitle">Grava direto na sua Google Planilha e atualiza o painel na hora</div>
+        </div>
+        <div class="tab-switch">
+          <button class="tab-btn active" id="tabShiftBtn" type="button">Lançar Ganhos (Turno)</button>
+          <button class="tab-btn" id="tabExpenseBtn" type="button">Lançar Combustível / Gasto</button>
+        </div>
+      </div>
+
+      <!-- Form Shift -->
+      <form class="quick-form-shift" id="quickShiftForm">
+        <div class="field">
+          <label for="shiftGross">Ganho Bruto (R$)</label>
+          <input id="shiftGross" type="number" step="0.01" min="0.01" inputmode="decimal" placeholder="Ex: 310,00" required />
+        </div>
+        <div class="field">
+          <label for="shiftBlock">Bloco</label>
+          <select id="shiftBlock">
+            <option value="Bloco 1 (9h-17h)">Bloco 1 (9h-17h)</option>
+            <option value="Bloco 2 (18h-22h)">Bloco 2 (18h-22h)</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="shiftStart">Início</label>
+          <input id="shiftStart" type="time" value="09:00" required />
+        </div>
+        <div class="field">
+          <label for="shiftEnd">Fim</label>
+          <input id="shiftEnd" type="time" value="17:00" required />
+        </div>
+        <div class="field">
+          <label for="shiftTrips">Corridas (opc.)</label>
+          <input id="shiftTrips" type="number" step="1" min="0" inputmode="numeric" placeholder="Ex: 24" />
+        </div>
+        <div class="field">
+          <label for="shiftKm">Km (opc.)</label>
+          <input id="shiftKm" type="number" step="0.1" min="0" inputmode="decimal" placeholder="Ex: 140" />
+        </div>
+        <button class="btn-link" id="btnSaveShift" type="submit" style="border:none;cursor:pointer;padding:11px 16px;">Salvar Ganhos</button>
+      </form>
+
+      <!-- Form Expense -->
+      <form class="quick-form" id="quickExpenseForm" style="display:none;">
+        <div class="field">
+          <label for="expAmount">Valor (R$)</label>
+          <input id="expAmount" type="number" step="0.01" min="0.01" inputmode="decimal" placeholder="Ex: 70,00" required />
+        </div>
+        <div class="field">
+          <label for="expCategory">Categoria</label>
+          <select id="expCategory">
+            <option value="Combustível">Combustível</option>
+            <option value="Lavagem">Lavagem</option>
+            <option value="Alimentação">Alimentação</option>
+            <option value="Outros">Outros</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="expFuel">Combustível</label>
+          <select id="expFuel">
+            <option value="Etanol">Etanol</option>
+            <option value="Gasolina">Gasolina</option>
+            <option value="GNV">GNV</option>
+            <option value="-">-</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="expLiters">Litros (opc.)</label>
+          <input id="expLiters" type="number" step="0.01" min="0" inputmode="decimal" placeholder="Ex: 18,5" />
+        </div>
+        <div class="field">
+          <label for="expNote">Observação (opc.)</label>
+          <input id="expNote" type="text" placeholder="Ex: Posto Shell" />
+        </div>
+        <button class="btn-primary" id="btnSaveExpense" type="submit">Salvar Gasto</button>
+      </form>
+      <div class="form-msg" id="formMsg"></div>
+    </section>
+
+    <!-- KPIs -->
+    <section class="kpi-grid">
+      <div class="kpi-card">
+        <span class="kpi-label">Bruto da Semana</span>
+        <span class="kpi-value mono text-blue" id="kpiGross">--</span>
+        <span class="kpi-foot" id="kpiGrossFoot">--</span>
+      </div>
+      <div class="kpi-card">
+        <span class="kpi-label">Custos da Semana</span>
+        <span class="kpi-value mono text-amber" id="kpiCosts">--</span>
+        <span class="kpi-foot" id="kpiCostsFoot">--</span>
+      </div>
+      <div class="kpi-card">
+        <span class="kpi-label">Saldo Líquido Atual</span>
+        <span class="kpi-value mono" id="kpiNet">--</span>
+        <span class="kpi-foot" id="kpiNetFoot">--</span>
+      </div>
+      <div class="kpi-card">
+        <span class="kpi-label">Média Bruta / Dia</span>
+        <span class="kpi-value mono text-emerald" id="kpiDailyAvg">--</span>
+        <span class="kpi-foot" id="kpiDailyFoot">--</span>
+      </div>
+    </section>
+
+    <!-- Break-even Thermometer -->
+    <section class="card">
+      <div class="thermo-top">
+        <div>
+          <div class="card-title">Termômetro do Aluguel + Combustível <span class="mono text-emerald" id="thermoPct" style="margin-left:8px;"></span></div>
+          <div class="card-subtitle">Acompanhamento em tempo real até zerar os custos fixos e variáveis da semana</div>
+        </div>
+        <span class="thermo-status" id="thermoBadge">--</span>
+      </div>
+      <div class="progress-track">
+        <div class="progress-fill" id="thermoFill" style="width: 0%"></div>
+      </div>
+      <div class="thermo-markers">
+        <span id="thermoStart">R$ 0</span>
+        <span id="thermoMid">--</span>
+        <span id="thermoEnd">--</span>
+      </div>
+    </section>
+
+    <!-- Chart + Block Comparison -->
+    <section class="grid-2">
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <div class="card-title">Faturamento Diário por Bloco</div>
+            <div class="card-subtitle">Comparativo com piso (R$ 400) e meta cheia (R$ 450)</div>
+          </div>
+          <div class="chart-legend">
+            <span><span class="legend-dot" style="background:#3b82f6"></span>Bloco 1 (Dia)</span>
+            <span><span class="legend-dot" style="background:#10b981"></span>Bloco 2 (Noite)</span>
+          </div>
+        </div>
+        <div class="chart-wrap" id="dailyChart"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <div class="card-title">Bloco 1 (Dia) vs Bloco 2 (Noite)</div>
+            <div class="card-subtitle">Rendimento médio por hora trabalhada</div>
+          </div>
+        </div>
+        <div class="block-list">
+          <div class="block-item">
+            <div class="block-row">
+              <span class="block-name">Bloco 1 • 09h às 17h</span>
+              <span class="block-rate mono text-blue" id="b1Rate">--</span>
+            </div>
+            <div class="block-bar-bg">
+              <div class="block-bar-fill" id="b1Bar" style="width:0%;background:#3b82f6;"></div>
+            </div>
+            <div class="block-meta">
+              <span id="b1Meta">--</span>
+              <span>Meta: R$ 300</span>
+            </div>
+          </div>
+
+          <div class="block-item">
+            <div class="block-row">
+              <span class="block-name">Bloco 2 • 18h às 22h</span>
+              <span class="block-rate mono text-emerald" id="b2Rate">--</span>
+            </div>
+            <div class="block-bar-bg">
+              <div class="block-bar-fill" id="b2Bar" style="width:0%;background:#10b981;"></div>
+            </div>
+            <div class="block-meta">
+              <span id="b2Meta">--</span>
+              <span>Meta: R$ 150</span>
+            </div>
+          </div>
+        </div>
+        <div class="insight-box" id="blockInsight">--</div>
+      </div>
+    </section>
+
+    <!-- Simulator + Categories -->
+    <section class="grid-equal">
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <div class="card-title">Simulador de Lucro da Semana</div>
+            <div class="card-subtitle">Escolha quanto quer colocar livre no bolso até segunda (23/11)</div>
+          </div>
+          <span class="mono text-emerald" style="font-size:18px;font-weight:800;" id="simTargetDisplay">R$ 1.000,00</span>
+        </div>
+
+        <div class="sim-buttons">
+          <button class="sim-btn" data-val="800" type="button">R$ 800</button>
+          <button class="sim-btn active" data-val="1000" type="button">R$ 1.000</button>
+          <button class="sim-btn" data-val="1200" type="button">R$ 1.200</button>
+          <button class="sim-btn" data-val="1500" type="button">R$ 1.500</button>
+        </div>
+
+        <input class="sim-slider" id="simSlider" type="range" min="400" max="2000" step="50" value="1000" />
+
+        <div class="sim-result">
+          <div class="sim-stat">
+            <div class="sim-stat-label">Falta Faturar (Bruto)</div>
+            <div class="sim-stat-val mono text-blue" id="simTotalNeed">--</div>
+          </div>
+          <div class="sim-stat">
+            <div class="sim-stat-label">Média / Dia (4 dias)</div>
+            <div class="sim-stat-val mono text-emerald" id="simPerDay">--</div>
+          </div>
+          <div class="sim-stat">
+            <div class="sim-stat-label">Com Folga Combustível</div>
+            <div class="sim-stat-val mono text-amber" id="simWithFuel">--</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <div class="card-title">Desempenho por Categoria</div>
+            <div class="card-subtitle">Baseado nas 129 corridas pagas extraídas da Uber (16/11–19/11)</div>
+          </div>
+        </div>
+        <div class="cat-list" id="catList"></div>
+      </div>
+    </section>
+
+    <!-- Shifts + Expenses Tables -->
+    <section class="grid-2">
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <div class="card-title">Histórico de Turnos</div>
+            <div class="card-subtitle">Espelho da aba Turnos no Google Sheets</div>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Data</th>
+                <th>Bloco</th>
+                <th>Horário</th>
+                <th>Horas</th>
+                <th>Corridas</th>
+                <th>Bruto</th>
+                <th>R$/Hora</th>
+                <th>Meta</th>
+                <th>Ciclo</th>
+              </tr>
+            </thead>
+            <tbody id="shiftsTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <div class="card-title">Combustível e Gastos</div>
+            <div class="card-subtitle">Lançamentos da semana atual</div>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Data</th>
+                <th>Categoria</th>
+                <th>Tipo</th>
+                <th>Valor</th>
+                <th>Obs.</th>
+              </tr>
+            </thead>
+            <tbody id="expensesTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- Modal Config API -->
+  <div class="modal-backdrop" id="apiModal">
+    <div class="modal-card">
+      <div class="card-title">Conectar Google Planilha (Apps Script)</div>
+      <p style="font-size:13px;color:var(--muted);">
+        Cole aqui a URL <code>/exec</code> gerada ao implantar o Apps Script na sua Google Planilha.
+      </p>
+      <div class="field">
+        <label for="apiUrlInput">URL do Web App (/exec)</label>
+        <input id="apiUrlInput" type="url" placeholder="https://script.google.com/macros/s/.../exec" />
+      </div>
+      <div style="display:flex;justify-content:flex-end;gap:10px;">
+        <button class="btn-ghost" id="btnCloseModal" type="button">Cancelar</button>
+        <button class="btn-primary" id="btnSaveApiUrl" type="button">Salvar Conexão</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="data.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
